@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = document.getElementById('submitBtn');
     const btnText = document.getElementById('btnText');
     const responseContainer = document.getElementById('responseContainer');
+    
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -33,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-            const res = await fetch('api/support.php', {
+            // Nahraď URL svou skutečnou adresou z Renderu, např. https://muj-app.onrender.com/chat
+            const res = await fetch('https://<TVOJE-RENDER-ADRESA>.onrender.com/chat',  {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: dotaz, email: email })
