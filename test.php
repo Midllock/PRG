@@ -18,10 +18,8 @@ if (empty($message)) {
     exit;
 }
 
-// Zkopíruj sem svůj celý nový AQ. klíč z Google AI Studia
-$apiKey = "AQ.Ab8RN6JokhCUUBWD9S0uCRgf7rfHFj7UrAHZVsZTp5PaDeQsNA";
-
-// URL API - Všimni si, že na konci už NENÍ parametr "?key=..."
+// Zde je tvůj AQ. token
+$apiKey = "AQ.Ab8RN6JUNspU_sLaiu0g7mSV15naEb1hO0byFxSLKVdPwXUgBw";
 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
 
 $payload = [
@@ -38,10 +36,10 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 
-// Nový typ AQ. klíče se nyní posílá bezpečně v hlavičce
+// OPRAVA ZDE: Access tokeny se musí posílat jako Bearer
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json",
-    "x-goog-api-key: " . $apiKey
+    "Authorization: Bearer " . $apiKey
 ]);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
 
@@ -58,7 +56,6 @@ if ($httpCode == 200) {
         echo json_encode(["error" => "Chyba při čtení odpovědi od AI."]);
     }
 } else {
-    // Upraveno pro lepší diagnostiku – pokud se to nepovede, rovnou na webu vypíšeme detail od Googlu
     echo json_encode(["error" => "Chyba API. HTTP Kód: $httpCode. Detail: " . $response]);
 }
 ?>
