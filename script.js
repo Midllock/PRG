@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Nahraď URL svou skutečnou adresou z Renderu, např. https://muj-app.onrender.com/chat
-            const res = await fetch('https://prg-2bmf.onrender.com/chat',  {
+            const res = await fetch('https://prg-2bmf.onrender.com/test.php',  {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: dotaz, email: email })
