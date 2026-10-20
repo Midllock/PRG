@@ -21,7 +21,7 @@ if (empty($message)) {
 }
 
 // 3. Odeslání dotazu do Gemini API
-$apiKey = "AQ.Ab8RN6JUNspU_sLaiu0g7mSV15naEb1hO0byFxSLKVdPwXUgBw";
+$apiKey = "AQ.Ab8RN6JokhCUUBWD9S0uCRgf7rfHFj7UrAHZVsZTp5PaDeQsNA";
 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" . $apiKey;
 
 $payload = [
