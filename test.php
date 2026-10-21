@@ -19,11 +19,11 @@ if (empty($message)) {
 }
 
 // Bezpečnější načtení proměnné z různých zdrojů (getenv, $_SERVER nebo $_ENV)
-$apiKey = getenv('GEMINI_API_KEY') ?: ($_SERVER['GEMINI_API_KEY'] ?? ($_ENV['GEMINI_API_KEY'] ?? ''));
+$apiKey = getenv('Gemini_API_Key') ?: ($_SERVER['Gemini_API_Key'] ?? ($_ENV['Gemini_API_Key'] ?? ''));
 
 // Bezpečnostní pojistka: pokud je klíč stále prázdný, skript se zastaví a zahlásí to
 if (empty($apiKey)) {
-    echo json_encode(["error" => "Kritická chyba serveru: Nepodařilo se načíst GEMINI_API_KEY z prostředí Renderu."]);
+    echo json_encode(["error" => "Kritická chyba serveru: Nepodařilo se načíst Gemini_API_Key z prostředí Renderu."]);
     exit;
 }
 
