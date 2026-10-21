@@ -19,7 +19,7 @@ if (empty($message)) {
 }
 
 // Zde je tvůj AQ. token
-$apiKey = "AQ.Ab8RN6LQFCEIhBDNfY6RS9_PD9EYq1UiiKK3GWJUCZ9wQfnNQA";
+$apiKey = getenv('GEMINI_API_KEY');
 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
 
 $payload = [
