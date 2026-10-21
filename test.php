@@ -18,10 +18,17 @@ if (empty($message)) {
     exit;
 }
 
-// Zde je tvůj AQ. token
-$apiKey = getenv('GEMINI_API_KEY');
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
+// Bezpečnější načtení proměnné z různých zdrojů (getenv, $_SERVER nebo $_ENV)
+$apiKey = getenv('GEMINI_API_KEY') ?: ($_SERVER['GEMINI_API_KEY'] ?? ($_ENV['GEMINI_API_KEY'] ?? ''));
 
+// Bezpečnostní pojistka: pokud je klíč stále prázdný, skript se zastaví a zahlásí to
+if (empty($apiKey)) {
+    echo json_encode(["error" => "Kritická chyba serveru: Nepodařilo se načíst GEMINI_API_KEY z prostředí Renderu."]);
+    exit;
+}
+
+// Zbytek kódu zůstává stejný
+$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" . $apiKey;
 $payload = [
     "contents" => [
         [
