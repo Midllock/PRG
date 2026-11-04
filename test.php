@@ -1,68 +1,93 @@
 <?php
-// Povolení CORS pro komunikaci s frontendem
+// CORS pro komunikaci s frontendem
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
-header('Content-Type: application/json; charset=utf-8');
+header("Content-Type: application/json; charset=utf-8");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(200);
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
-$message = isset($input['message']) ? trim($input['message']) : '';
-
-if (empty($message)) {
-    echo json_encode(["error" => "Dotaz je prázdný."]);
+function sendJson($data, $status = 200) {
+    http_response_code($status);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// Bezpečnější načtení proměnné z různých zdrojů (getenv, $_SERVER nebo $_ENV)
-$apiKey = getenv('Gemini_API_Key') ?: ($_SERVER['Gemini_API_Key'] ?? ($_ENV['Gemini_API_Key'] ?? ''));
+$input = json_decode(file_get_contents("php://input"), true);
+$message = isset($input["message"]) && is_string($input["message"])
+    ? trim($input["message"])
+    : "";
 
-// Bezpečnostní pojistka: pokud je klíč stále prázdný, skript se zastaví a zahlásí to
-if (empty($apiKey)) {
-    echo json_encode(["error" => "Kritická chyba serveru: Nepodařilo se načíst Gemini_API_Key z prostředí Renderu."]);
-    exit;
+if ($message === "") {
+    sendJson(["error" => "Dotaz je prázdný."], 400);
 }
 
-// Zbytek kódu zůstává stejný
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" . $apiKey;
+// Na Renderu nastav Environment Variable s názvem OPENAI_API_KEY.
+// API klíč zůstává na serveru a neposílá se do frontendu.
+$apiKey = getenv("OPENAI_API_KEY")
+    ?: ($_SERVER["OPENAI_API_KEY"] ?? ($_ENV["OPENAI_API_KEY"] ?? ""));
+
+if ($apiKey === "") {
+    sendJson(["error" => "Na serveru není nastavená proměnná OPENAI_API_KEY."], 500);
+}
+
+$endpoint = "https://api.openai.com/v1/responses";
 $payload = [
-    "contents" => [
-        [
-            "role" => "user",
-            "parts" => [["text" => $message]]
-        ]
-    ]
+    "model" => "gpt-4.1-mini",
+    "input" => $message
 ];
 
 $ch = curl_init($endpoint);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-
-// OPRAVA ZDE: Access tokeny se musí posílat jako Bearer
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json",
-    "Authorization: Bearer " . $apiKey
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+    CURLOPT_HTTPHEADER => [
+        "Content-Type: application/json",
+        "Authorization: Bearer " . $apiKey
+    ],
+    CURLOPT_CONNECTTIMEOUT => 15,
+    CURLOPT_TIMEOUT => 60
+    // SSL ověřování zůstává zapnuté (výchozí nastavení cURL).
 ]);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
 curl_close($ch);
 
-if ($httpCode == 200) {
-    $geminiData = json_decode($response, true);
-    if (isset($geminiData['candidates'][0]['content']['parts'][0]['text'])) {
-        $replyText = $geminiData['candidates'][0]['content']['parts'][0]['text'];
-        echo json_encode(["reply" => $replyText]);
-    } else {
-        echo json_encode(["error" => "Chyba při čtení odpovědi od AI."]);
-    }
-} else {
-    echo json_encode(["error" => "Chyba API. HTTP Kód: $httpCode. Detail: " . $response]);
+if ($response === false) {
+    sendJson(["error" => "Chyba při spojení s OpenAI API: " . $curlError], 502);
 }
+
+$data = json_decode($response, true);
+
+if ($httpCode < 200 || $httpCode >= 300) {
+    $apiMessage = $data["error"]["message"] ?? "OpenAI API vrátilo chybu.";
+    sendJson(["error" => "OpenAI API (HTTP " . $httpCode . "): " . $apiMessage], $httpCode);
+}
+
+// Responses API vrací text v output[].content[] jako output_text.
+$replyText = "";
+if (isset($data["output"]) && is_array($data["output"])) {
+    foreach ($data["output"] as $item) {
+        if (!isset($item["content"]) || !is_array($item["content"])) {
+            continue;
+        }
+        foreach ($item["content"] as $content) {
+            if (($content["type"] ?? "") === "output_text" && isset($content["text"])) {
+                $replyText .= $content["text"];
+            }
+        }
+    }
+}
+
+if ($replyText === "") {
+    sendJson(["error" => "V odpovědi OpenAI se nepodařilo najít text."], 502);
+}
+
+sendJson(["reply" => $replyText]);
 ?>
