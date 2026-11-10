@@ -25,19 +25,25 @@ if ($message === "") {
     sendJson(["error" => "Dotaz je prázdný."], 400);
 }
 
-// Na Renderu nastav Environment Variable s názvem OPENAI_API_KEY.
-// API klíč zůstává na serveru a neposílá se do frontendu.
-$apiKey = getenv("OPENAI_API_KEY")
-    ?: ($_SERVER["OPENAI_API_KEY"] ?? ($_ENV["OPENAI_API_KEY"] ?? ""));
+// Nastav Environment Variable s názvem GEMINI_API_KEY
+$apiKey = getenv("GEMINI_API_KEY")
+    ?: ($_SERVER["GEMINI_API_KEY"] ?? ($_ENV["GEMINI_API_KEY"] ?? ""));
 
 if ($apiKey === "") {
-    sendJson(["error" => "Na serveru není nastavená proměnná OPENAI_API_KEY."], 500);
+    sendJson(["error" => "Na serveru není nastavená proměnná GEMINI_API_KEY."], 500);
 }
 
-$endpoint = "https://api.openai.com/v1/responses";
+// Endpoint pro nejnovější vlajkový model Gemini 4 Argon
+$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-argon:generateContent?key=" . $apiKey;
+
 $payload = [
-    "model" => "gpt-4.1-mini",
-    "input" => $message
+    "contents" => [
+        [
+            "parts" => [
+                ["text" => $message]
+            ]
+        ]
+    ]
 ];
 
 $ch = curl_init($endpoint);
@@ -46,12 +52,11 @@ curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
     CURLOPT_HTTPHEADER => [
-        "Content-Type: application/json",
-        "Authorization: Bearer " . $apiKey
+        "Content-Type: application/json"
     ],
     CURLOPT_CONNECTTIMEOUT => 15,
-    CURLOPT_TIMEOUT => 60
-    // SSL ověřování zůstává zapnuté (výchozí nastavení cURL).
+    // Zvýšený timeout na 15 minut (900 s) kvůli delší době zpracování složitějších dotazů u modelu Argon
+    CURLOPT_TIMEOUT => 900
 ]);
 
 $response = curl_exec($ch);
@@ -60,33 +65,23 @@ $curlError = curl_error($ch);
 curl_close($ch);
 
 if ($response === false) {
-    sendJson(["error" => "Chyba při spojení s OpenAI API: " . $curlError], 502);
+    sendJson(["error" => "Chyba při spojení s Gemini API: " . $curlError], 502);
 }
 
 $data = json_decode($response, true);
 
 if ($httpCode < 200 || $httpCode >= 300) {
-    $apiMessage = $data["error"]["message"] ?? "OpenAI API vrátilo chybu.";
-    sendJson(["error" => "OpenAI API (HTTP " . $httpCode . "): " . $apiMessage], $httpCode);
+    $apiMessage = $data["error"]["message"] ?? "Gemini API vrátilo chybu.";
+    sendJson(["error" => "Gemini API (HTTP " . $httpCode . "): " . $apiMessage], $httpCode);
 }
 
-// Responses API vrací text v output[].content[] jako output_text.
 $replyText = "";
-if (isset($data["output"]) && is_array($data["output"])) {
-    foreach ($data["output"] as $item) {
-        if (!isset($item["content"]) || !is_array($item["content"])) {
-            continue;
-        }
-        foreach ($item["content"] as $content) {
-            if (($content["type"] ?? "") === "output_text" && isset($content["text"])) {
-                $replyText .= $content["text"];
-            }
-        }
-    }
+if (isset($data["candidates"][0]["content"]["parts"][0]["text"])) {
+    $replyText = $data["candidates"][0]["content"]["parts"][0]["text"];
 }
 
 if ($replyText === "") {
-    sendJson(["error" => "V odpovědi OpenAI se nepodařilo najít text."], 502);
+    sendJson(["error" => "V odpovědi Gemini se nepodařilo najít text."], 502);
 }
 
 sendJson(["reply" => $replyText]);
