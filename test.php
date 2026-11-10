@@ -33,36 +33,41 @@ if ($apiKey === "") {
     sendJson(["error" => "Na serveru není nastavená proměnná GEMINI_API_KEY."], 500);
 }
 
-// Endpoint pro nejnovější vlajkový model Gemini 4 Argon
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" . $apiKey;
+$maxRetries = 3;
+$retryCount = 0;
+$delay = 2; // Počáteční zpoždění v sekundách
 
-$payload = [
-    "contents" => [
-        [
-            "parts" => [
-                ["text" => $message]
-            ]
-        ]
-    ]
-];
+do {
+    $ch = curl_init($endpoint);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_HTTPHEADER => [
+            "Content-Type: application/json"
+        ],
+        CURLOPT_CONNECTTIMEOUT => 15,
+        CURLOPT_TIMEOUT => 60
+    ]);
 
-$ch = curl_init($endpoint);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
-    CURLOPT_HTTPHEADER => [
-        "Content-Type: application/json"
-    ],
-    CURLOPT_CONNECTTIMEOUT => 15,
-    // Zvýšený timeout na 15 minut (900 s) kvůli delší době zpracování složitějších dotazů u modelu Argon
-    CURLOPT_TIMEOUT => 900
-]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
-curl_close($ch);
+    // Pokud je server přetížen (503) nebo jsme narazili na limit (429)
+    if ($httpCode === 503 || $httpCode === 429) {
+        $retryCount++;
+        if ($retryCount <= $maxRetries) {
+            sleep($delay);
+            $delay *= 2; // Další čekání bude delší (2s, 4s, 8s)
+            continue; // Skočí na další průběh cyklu
+        }
+    }
+    
+    // Pokud je to jiný kód (např. 200 OK) nebo došly pokusy, jdeme dál
+    break;
+} while ($retryCount <= $maxRetries);
 
 if ($response === false) {
     sendJson(["error" => "Chyba při spojení s Gemini API: " . $curlError], 502);
