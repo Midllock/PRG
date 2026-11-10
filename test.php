@@ -34,7 +34,7 @@ if ($apiKey === "") {
 }
 
 // Endpoint pro nejnovější vlajkový model Gemini 4 Argon
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-argon:generateContent?key=" . $apiKey;
+$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
 
 $payload = [
     "contents" => [
