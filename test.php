@@ -62,7 +62,7 @@ do {
             "Content-Type: application/json"
         ],
         CURLOPT_CONNECTTIMEOUT => 15,
-        CURLOPT_TIMEOUT => 60,
+        CURLOPT_TIMEOUT => 120,
         // Pokud testuješ lokálně na XAMPPu a hází to cURL Error 60 (SSL), odkomentuj řádek níže:
         // CURLOPT_SSL_VERIFYPEER => false 
     ]);
