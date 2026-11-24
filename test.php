@@ -64,7 +64,7 @@ do {
         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,          // Vynutí IPv4 (řeší timeout na Renderu)
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,   // Zabrání zasekávání HTTP/2 v Dockeru
         CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT => 25,
     ]);
 
     $response = curl_exec($ch);
