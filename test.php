@@ -26,15 +26,14 @@ if ($message === "") {
 }
 
 // Získání API klíče
-$apiKey = getenv("GEMINI_API_KEY")
-    ?: ($_SERVER["GEMINI_API_KEY"] ?? ($_ENV["GEMINI_API_KEY"] ?? ""));
+$apiKey = trim(getenv("GEMINI_API_KEY")
+    ?: ($_SERVER["GEMINI_API_KEY"] ?? ($_ENV["GEMINI_API_KEY"] ?? "")));
 
 if ($apiKey === "") {
     sendJson(["error" => "Na serveru není nastavená proměnná GEMINI_API_KEY."], 500);
 }
 
-// 1. ZDE SE DEFINUJE ENDPOINT (Před cyklem)
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" . $apiKey;
+$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 // 2. ZDE SE DEFINUJE PAYLOAD (Před cyklem)
 $payload = [
@@ -59,16 +58,19 @@ do {
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
         CURLOPT_HTTPHEADER => [
-            "Content-Type: application/json"
+            "Content-Type: application/json",
+            "x-goog-api-key: " . $apiKey,
+            "Expect:"
         ],
-        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,          // Vynutí IPv4 (řeší timeout na Renderu)
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,   // Zabrání zasekávání HTTP/2 v Dockeru
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT => 25,
     ]);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlInfo = curl_getinfo($ch);
     $curlError = curl_error($ch);
     curl_close($ch);
 
@@ -88,7 +90,14 @@ do {
 
 // Zpracování chyb spojení
 if ($response === false) {
-    sendJson(["error" => "Chyba při spojení s Gemini API: " . $curlError], 502);
+    $diag = sprintf(
+        "IP=%s, DNS=%.2fs, TCP=%.2fs, SSL=%.2fs",
+        $curlInfo["primary_ip"] ?: "none",
+        $curlInfo["namelookup_time"] ?? 0,
+        $curlInfo["connect_time"] ?? 0,
+        $curlInfo["appconnect_time"] ?? 0
+    );
+    sendJson(["error" => "Chyba při spojení s Gemini API: " . $curlError . " [" . $diag . "]"], 502);
 }
 
 $data = json_decode($response, true);
