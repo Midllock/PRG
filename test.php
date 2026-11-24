@@ -33,7 +33,7 @@ if ($apiKey === "") {
     sendJson(["error" => "Na serveru není nastavená proměnná GEMINI_API_KEY."], 500);
 }
 
-$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-Flash-lite:generateContent";
+$endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent";
 
 // 2. ZDE SE DEFINUJE PAYLOAD (Před cyklem)
 $payload = [
