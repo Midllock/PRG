@@ -61,10 +61,10 @@ do {
         CURLOPT_HTTPHEADER => [
             "Content-Type: application/json"
         ],
-        CURLOPT_CONNECTTIMEOUT => 15,
-        CURLOPT_TIMEOUT => 120,
-        // Pokud testuješ lokálně na XAMPPu a hází to cURL Error 60 (SSL), odkomentuj řádek níže:
-        // CURLOPT_SSL_VERIFYPEER => false 
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,          // Vynutí IPv4 (řeší timeout na Renderu)
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,   // Zabrání zasekávání HTTP/2 v Dockeru
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 30,
     ]);
 
     $response = curl_exec($ch);
